@@ -1,0 +1,22 @@
+{
+    "manifest_version": 2,
+
+    "name": "unison",
+    "description": "unison - chrome extension to show synchronized lyrics for vk.com",
+    "version": "1.0",
+
+    "browser_action": {
+        "default_icon": "icon.png",
+        "default_popup": "popup.html"
+    },
+
+    "permissions": [
+        "webRequestBlocking",
+        "webRequest",
+        "*://*/*"
+    ],
+
+    "background": {
+        "scripts": ["bundle/background.js"]
+    }
+}
