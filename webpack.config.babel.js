@@ -92,25 +92,29 @@
 // }
 
 import path from 'path';
-import ExtractTextPlugin from 'extract-text-webpack-plugin';
+//import ExtractTextPlugin from 'extract-text-webpack-plugin';
+import webpack from 'webpack';
 
 export default () => ({
     entry: {
-        script: path.join(__dirname, 'index.jsx'),
-        background: path.join(__dirname, 'background.jsx')
+        script: path.join(__dirname, 'index.js'),
+        background: path.join(__dirname, 'background.js')
     },
     output: {
         path: path.join(__dirname, 'extension', 'bundle'),
         filename: '[name].js'
     },
     plugins: [
-        new ExtractTextPlugin('[name].css')
+//        new ExtractTextPlugin('[name].css'),
+        new webpack.DefinePlugin({
+            LIBS: JSON.stringify(__dirname + '/libs/')
+        })
     ],
 
     watch: true,
     module: {
         rules: [{
-                test: /.jsx?$/,
+                test: /.js?$/,
                 exclude: /node_modules/,
                 use: [{
                     loader: 'babel-loader',
@@ -128,14 +132,15 @@ export default () => ({
             {
                 test: /\.css$/,
                 loader: "style-loader!css-loader!autoprefixer-loader",
-                exclude: [/node_modules/, /public/]
+                exclude: [/node_modules/]
             }, {
                 test: /\.less$/,
-                loader: ExtractTextPlugin.extract({
-                    fallback: 'style-loader',
-                    use: 'css-loader!autoprefixer-loader!less-loader'
-                }),
-                exclude: [/node_modules/, /public/]
+                loader: 'style-loader!css-loader!autoprefixer-loader!less-loader',
+                // loader: ExtractTextPlugin.extract({
+                //     fallback: 'style-loader',
+                //     use: 'css-loader!autoprefixer-loader!less-loader'
+                // }),
+                exclude: [/node_modules/]
             }, {
                 test: /\.(png|jpg|svg|ttf|eot|woff|woff2)$/,
                 loader: 'url-loader?limit=4096'

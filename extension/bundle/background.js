@@ -63,14 +63,29 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 0);
+/******/ 	return __webpack_require__(__webpack_require__.s = 189);
 /******/ })
 /************************************************************************/
-/******/ ([
-/* 0 */
+/******/ ({
+
+/***/ 189:
 /***/ (function(module, exports) {
 
+chrome.webRequest.onHeadersReceived.addListener(function (data) {
+    console.log('web request');
 
+    data.responseHeaders.push({
+        name: 'Access-Control-Allow-Origin',
+        value: '*'
+    });
+
+    return {
+        responseHeaders: data.responseHeaders
+    };
+}, {
+    urls: ["<all_urls>"]
+}, ["blocking", "responseHeaders"]);
 
 /***/ })
-/******/ ]);
+
+/******/ });
