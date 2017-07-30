@@ -97,7 +97,7 @@ import webpack from 'webpack';
 
 export default () => ({
     entry: {
-        'script': path.join(__dirname, 'index.js'),
+        'popup': path.join(__dirname, 'popup.js'),
         'background': path.join(__dirname, 'background.js'),
         'unison-spy': path.join(__dirname, 'unison-spy.js')
     },
@@ -106,9 +106,13 @@ export default () => ({
         filename: '[name].js'
     },
     plugins: [
-//        new ExtractTextPlugin('[name].css'),
-        new webpack.DefinePlugin({
-            LIBS: JSON.stringify(__dirname + '/libs/')
+        //        new ExtractTextPlugin('[name].css'),
+        // new webpack.DefinePlugin({
+        //     LIBS: JSON.stringify(__dirname + '/libs/')
+        // }),
+        new webpack.optimize.CommonsChunkPlugin({
+            name: 'common',
+            chunks: ['script', 'popup']
         })
     ],
 

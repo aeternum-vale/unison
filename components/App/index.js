@@ -4,7 +4,7 @@ import ControlBar from '../ControlBar';
 import './style.less';
 
 import Actions from '../../actions';
-import Store from '../../store';
+let Store = chrome.extension.getBackgroundPage().Store;
 
 // let testLrc = `[ti:Lonely Day]
 // [ar:System of a Down]
@@ -51,6 +51,7 @@ import Store from '../../store';
 // [02:47.70]END?`;
 
 function getStateFromFlux() {
+
     return {
         lrc: Store.lrc,
         artist: Store.artist,

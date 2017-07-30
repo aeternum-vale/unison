@@ -1,4 +1,5 @@
-import AppDispatcher from '../dispatcher';
+let AppDispatcher = chrome.extension.getBackgroundPage().AppDispatcher;
+
 import AppConstants from '../constants';
 import api from '../api';
 

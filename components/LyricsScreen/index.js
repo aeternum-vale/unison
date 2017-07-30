@@ -68,8 +68,13 @@ export default class LyricsScreen extends Component {
         if (this.props.lrcArray) {
             let {offset, currentLineIndex, currentLineProgress} = this._calculateCurrentLineData();
             return (
-                <div className='lyrics-screen' >
+                <div className='lyrics-screen'>
+                {'time: ' + this.state.time.toFixed(2) }
+                <br/>
+                {'offset: ' + offset.toFixed(2)}
+
                     <div className='lyrics-screen__lyrics' style={{transform: `translateY(${offset}px)`}}>
+
                         {
                             this.props.lrcArray.map((item, index) => {
                                 //console.log(this.state.time + " " + item.time + " " + ((Math.abs(this.state.time - item.time) / 1000)% 1));
@@ -99,7 +104,7 @@ export default class LyricsScreen extends Component {
         } else {
             return (
                 <div className='lyrics-screen' >
-                    <div className='lyrics-screen__lyrics'>No lyrics</div>
+                    No lyrics
                 </div>
             )
         }
