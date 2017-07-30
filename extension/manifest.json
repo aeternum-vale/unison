@@ -18,5 +18,10 @@
 
     "background": {
         "scripts": ["bundle/background.js"]
-    }
+    },
+
+    "content_scripts": [{
+        "matches": ["*://vk.com/*"],
+        "js": ["bundle/unison-spy.js"]
+    }]
 }

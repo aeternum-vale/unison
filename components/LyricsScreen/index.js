@@ -6,23 +6,43 @@ export default class LyricsScreen extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            lrcArray: this.props._lrcArray,
             time: 0
         };
 
+        this.interval = -1;
+
         this.SCREEN_HEIGHT = 280;
         this.LINE_HEIGHT = 20;
-
-        // let interval = 41;
-        // setInterval(() => {
-        //     this.setState({time: this.state.time + interval});
-        // }, interval);
-
     }
 
+    _play() {
+         let prev = performance.now();;
+         this.interval = setInterval(() => {
+             let now = performance.now();
+             let timePassed = now - prev;
+             prev = now;
+
+             this.setState({
+                 time: this.state.time + timePassed
+             });
+
+         }, 42);
+    }
+
+    _pause() {
+        clearInterval(this.interval);
+        this.interval = -1;
+    }
+
+    componentWillReceiveProps(newProps) {
+        if (!~this.interval && newProps.isPlaying)
+            this._play();
+        if (~this.interval && !newProps.isPlaying)
+            this._pause();
+    }
 
     _calculateCurrentLineData() {
-        let la = this.state.lrcArray;
+        let la = this.props.lrcArray;
         let time = this.state.time;
 
         let currentLineIndex = la.length - 1;
@@ -45,35 +65,44 @@ export default class LyricsScreen extends Component {
     }
 
     render() {
-        let {offset, currentLineIndex, currentLineProgress} = this._calculateCurrentLineData();
-        return (
-            <div className="lyrics-screen" >
-                <div className="lyrics-screen__lyrics" style={{transform: `translateY(${offset}px)`}}>
-                    {
-                        this.state.lrcArray.map((item, index) => {
-                            //console.log(this.state.time + " " + item.time + " " + ((Math.abs(this.state.time - item.time) / 1000)% 1));
-                            let opacity = 0;
+        if (this.props.lrcArray) {
+            let {offset, currentLineIndex, currentLineProgress} = this._calculateCurrentLineData();
+            return (
+                <div className='lyrics-screen' >
+                    <div className='lyrics-screen__lyrics' style={{transform: `translateY(${offset}px)`}}>
+                        {
+                            this.props.lrcArray.map((item, index) => {
+                                //console.log(this.state.time + " " + item.time + " " + ((Math.abs(this.state.time - item.time) / 1000)% 1));
+                                let opacity = 0;
 
-                            if (index === currentLineIndex - 1)
-                                opacity = 1 - currentLineProgress;
-                            if (index === currentLineIndex)
-                                opacity = 1;
-                            if (index === currentLineIndex + 1)
-                                opacity = currentLineProgress;
+                                if (index === currentLineIndex - 1)
+                                    opacity = 1 - currentLineProgress;
+                                if (index === currentLineIndex)
+                                    opacity = 1;
+                                if (index === currentLineIndex + 1)
+                                    opacity = currentLineProgress;
 
-                            // let diff = Math.abs(this.state.time -  item.time);
-                            //
-                            // if (index === currentLineIndex)
-                            //     opacity = 1; else
-                            // if (diff < 5000)
-                            //     opacity = 1 - diff / 5000;
+                                // let diff = Math.abs(this.state.time -  item.time);
+                                //
+                                // if (index === currentLineIndex)
+                                //     opacity = 1; else
+                                // if (diff < 5000)
+                                //     opacity = 1 - diff / 5000;
 
 
-                            return <div key={index} style={{opacity}} className="lyrics-screen__line">{item.line || "\u00a0"}</div>
-                        })
-                    }
+                                return <div key={index} style={{opacity}} className='lyrics-screen__line'>{item.line || "\u00a0"}</div>
+                            })
+                        }
+                    </div>
                 </div>
-            </div>
-        )
+            )
+        } else {
+            return (
+                <div className='lyrics-screen' >
+                    <div className='lyrics-screen__lyrics'>No lyrics</div>
+                </div>
+            )
+        }
+
     }
 }

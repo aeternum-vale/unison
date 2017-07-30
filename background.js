@@ -10,7 +10,16 @@ chrome.webRequest.onHeadersReceived.addListener((data) => {
         responseHeaders: data.responseHeaders
     };
 }, {
-    urls: ["<all_urls>"]
+    urls: ["*://google.com/*", "*://lyricslrc.com/*"]
 }, [
     "blocking", "responseHeaders"
 ]);
+
+
+chrome.runtime.onMessage.addListener(
+    function(request, sender, sendResponse) {
+        console.log(sender.tab ?
+            "from a content script:" + sender.tab.url :
+            "from the extension");
+        console.log(request);
+    });

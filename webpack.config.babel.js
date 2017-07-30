@@ -97,8 +97,9 @@ import webpack from 'webpack';
 
 export default () => ({
     entry: {
-        script: path.join(__dirname, 'index.js'),
-        background: path.join(__dirname, 'background.js')
+        'script': path.join(__dirname, 'index.js'),
+        'background': path.join(__dirname, 'background.js'),
+        'unison-spy': path.join(__dirname, 'unison-spy.js')
     },
     output: {
         path: path.join(__dirname, 'extension', 'bundle'),
