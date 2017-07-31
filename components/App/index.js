@@ -1,9 +1,11 @@
-import  React, { Component } from 'react';
+import React, {
+    Component
+} from 'react';
 import LyricsScreen from '../LyricsScreen';
 import ControlBar from '../ControlBar';
 import './style.less';
 
-import Actions from '../../actions';
+let Actions = chrome.extension.getBackgroundPage().Actions;
 let Store = chrome.extension.getBackgroundPage().Store;
 
 // let testLrc = `[ti:Lonely Day]
@@ -56,8 +58,9 @@ function getStateFromFlux() {
         lrc: Store.lrc,
         artist: Store.artist,
         title: Store.title,
-        time: 0,
-        isPlaying: Store.isPlaying
+        time: Store.time,
+        playingState: Store.playingState,
+        viewState: Store.viewState
     };
 }
 
@@ -68,19 +71,56 @@ export default class App extends Component {
 
         this.state = getStateFromFlux();
 
+        this.interval = -1;
+
         this._onChange = this._onChange.bind(this);
+        this._play = this._play.bind(this);
+        this._pause = this._pause.bind(this);
+    }
+
+    _play() {
+        this._pause();
+        if (this.interval === -1) {
+            let total = 0;
+            let prev = performance.now();
+            this.interval = setInterval(() => {
+                let now = performance.now();
+                let timePassed = now - prev;
+                total += timePassed;
+                prev = now;
+
+                if (total < 1000)
+                    Actions.setTime(this.state.time + timePassed);
+            }, 42);
+        }
+    }
+
+    _pause() {
+        clearInterval(this.interval);
+        this.interval = -1;
     }
 
     componentDidMount() {
+        if (this.state.playingState)
+            this._play();
+        else
+            this._pause();
+
         Store.addChangeListener(this._onChange);
     }
 
     componentWillUnmount() {
+        this._pause();
         Store.removeChangeListener(this._onChange);
     }
 
     _onChange() {
-        this.setState(getStateFromFlux());
+        this.setState(getStateFromFlux(), () => {
+            if (this.state.playingState)
+                this._play();
+            else
+                this._pause();
+        });
     }
 
     _getLrcArray(lrc) {
@@ -123,7 +163,19 @@ export default class App extends Component {
     render() {
         return (
             <div className='app'>
-                <LyricsScreen lrcArray={ this.state.lrc ? this._getLrcArray(this.state.lrc) : null } isPlaying={ this.state.isPlaying } initialTime={ this.state.time } />
+                <LyricsScreen viewState = {
+                        this.state.viewState
+                    }
+                    title = {
+                        this.state.title
+                    }
+                    lrcArray = {
+                        this.state.lrc ? this._getLrcArray(this.state.lrc) : null
+                    }
+                    time = {
+                        this.state.time
+                    }
+                />
                 <ControlBar />
             </div>
         );

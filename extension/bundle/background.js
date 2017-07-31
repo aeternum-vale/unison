@@ -63,7 +63,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 198);
+/******/ 	return __webpack_require__(__webpack_require__.s = 196);
 /******/ })
 /************************************************************************/
 /******/ ({
@@ -322,23 +322,6 @@ module.exports = invariant;
 
 /***/ }),
 
-/***/ 108:
-/***/ (function(module, exports, __webpack_require__) {
-
-/**
- * Copyright (c) 2014-2015, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- */
-
-module.exports.Dispatcher = __webpack_require__(109);
-
-
-/***/ }),
-
 /***/ 109:
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -578,7 +561,207 @@ module.exports = Dispatcher;
 
 /***/ }),
 
-/***/ 110:
+/***/ 196:
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__constants__ = __webpack_require__(25);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_flux__ = __webpack_require__(87);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_flux___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_flux__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__api__ = __webpack_require__(89);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_events__ = __webpack_require__(86);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_events___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_events__);
+chrome.webRequest.onHeadersReceived.addListener(function (data) {
+    data.responseHeaders.push({
+        name: 'Access-Control-Allow-Origin',
+        value: '*'
+    });
+
+    return {
+        responseHeaders: data.responseHeaders
+    };
+}, {
+    urls: ["*://google.com/*", "*://lyricslrc.com/*"]
+}, ["blocking", "responseHeaders"]);
+
+// chrome.browserAction.onClicked.addListener(function(tab) {
+//     console.log(tab)
+//     console.log(chrome.extension.getViews());
+// });
+//chrome.browserAction.setPopup({popup: '../background.html'});
+
+// chrome.runtime.onMessage.addListener(
+//     function(request, sender, sendResponse) {
+//         console.log(sender.tab ?
+//             "from a content script:" + sender.tab.url :
+//             "from the extension");
+//         console.log(request);
+//     });
+
+//console.log(chrome.extension.getViews());
+
+
+//-----------------------------------------------------
+
+
+
+var AppDispatcher = new __WEBPACK_IMPORTED_MODULE_1_flux__["Dispatcher"]();
+
+//------------------------------------------------------
+
+var dispatch = function dispatch(payload) {
+    return AppDispatcher.dispatch(payload);
+};
+
+var Actions = {
+    setNewLyrics: function setNewLyrics(artist, title) {
+        dispatch({
+            type: __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].LYRYCS_LOAD_START,
+            artist: artist,
+            title: title
+        });
+
+        __WEBPACK_IMPORTED_MODULE_2__api__["a" /* default */].search(artist, title).then(function (lrc) {
+            dispatch({
+                type: __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].LYRYCS_LOAD_SUCCESS,
+                lrc: lrc,
+                artist: artist,
+                title: title
+            });
+        }).catch(function () {
+            dispatch({
+                type: __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].LYRYCS_LOAD_FAIL,
+                artist: artist,
+                title: title
+            });
+        });
+    },
+    setTime: function setTime(time) {
+        dispatch({
+            type: __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].TIME_CHANGE,
+            time: time
+        });
+    },
+    setPlayingState: function setPlayingState(playingState) {
+        dispatch({
+            type: __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].PLAYING_STATE_CHANGE,
+            playingState: playingState
+        });
+    }
+};
+
+//-------------------------------------------------
+
+
+
+var Store = Object.assign({}, __WEBPACK_IMPORTED_MODULE_3_events__["EventEmitter"].prototype, {
+    lrc: null,
+    artist: null,
+    title: null,
+    playingState: false,
+    time: 0,
+    viewState: __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].VIEW_STATE_REPOSE,
+
+    emitChange: function emitChange() {
+        this.emit(__WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].CHANGE_EVENT);
+    },
+    addChangeListener: function addChangeListener(callback) {
+        this.on(__WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].CHANGE_EVENT, callback);
+    },
+    removeChangeListener: function removeChangeListener(callback) {
+        this.removeListener(__WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].CHANGE_EVENT, callback);
+    }
+});
+
+AppDispatcher.register(dispatcherCallback);
+
+function dispatcherCallback(payload) {
+    console.log('dispatcherCallback');
+
+    switch (payload.type) {
+        case __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].LYRYCS_LOAD_START:
+            Store.artist = payload.artist;
+            Store.title = payload.title;
+            Store.viewState = __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].VIEW_STATE_LOADING;
+            break;
+
+        case __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].LYRYCS_LOAD_SUCCESS:
+            Store.lrc = payload.lrc;
+            Store.artist = payload.artist;
+            Store.title = payload.title;
+            Store.playingState = true;
+            Store.time = 0;
+            Store.viewState = __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].VIEW_STATE_LYRICS;
+            break;
+
+        case __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].LYRYCS_LOAD_FAIL:
+            Store.lrc = null;
+            Store.artist = payload.artist;
+            Store.title = payload.title;
+            Store.playingState = false;
+            Store.time = 0;
+            Store.viewState = __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].VIEW_STATE_ERROR;
+            break;
+
+        case __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].PLAYING_STATE_CHANGE:
+            Store.playingState = payload.playingState;
+            break;
+
+        case __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].TIME_CHANGE:
+            Store.time = payload.time;
+            break;
+
+    }
+
+    Store.emitChange();
+    return true;
+}
+
+//-----------------
+
+chrome.runtime.onMessage.addListener(function (VKState) {
+    console.log('background onmessage: ');
+    console.log(VKState);
+
+    if (Store.time !== VKState.time) Actions.setTime(VKState.time);
+
+    if (Store.artist !== VKState.artist || Store.title !== VKState.title) Actions.setNewLyrics(VKState.artist, VKState.title);
+
+    if (Store.playingState !== VKState.playingState) Actions.setPlayingState(VKState.playingState);
+});
+
+window.AppDispatcher = AppDispatcher;
+window.Store = Store;
+window.Actions = Actions;
+
+/***/ }),
+
+/***/ 25:
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_keymirror__ = __webpack_require__(36);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_keymirror___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_keymirror__);
+
+
+/* harmony default export */ __webpack_exports__["a"] = (__WEBPACK_IMPORTED_MODULE_0_keymirror___default()({
+    CHANGE_EVENT: null,
+    LYRYCS_LOAD_START: null,
+    LYRYCS_LOAD_SUCCESS: null,
+    LYRYCS_LOAD_FAIL: null,
+    PLAYING_STATE_CHANGE: null,
+    TIME_CHANGE: null,
+
+    VIEW_STATE_LYRICS: null,
+    VIEW_STATE_LOADING: null,
+    VIEW_STATE_ERROR: null,
+    VIEW_STATE_REPOSE: null
+}));
+
+/***/ }),
+
+/***/ 36:
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -639,125 +822,7 @@ module.exports = keyMirror;
 
 /***/ }),
 
-/***/ 198:
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_events__ = __webpack_require__(93);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_events___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_events__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_flux__ = __webpack_require__(108);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_flux___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_flux__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__constants__ = __webpack_require__(85);
-chrome.webRequest.onHeadersReceived.addListener(function (data) {
-    data.responseHeaders.push({
-        name: 'Access-Control-Allow-Origin',
-        value: '*'
-    });
-
-    return {
-        responseHeaders: data.responseHeaders
-    };
-}, {
-    urls: ["*://google.com/*", "*://lyricslrc.com/*"]
-}, ["blocking", "responseHeaders"]);
-
-// chrome.browserAction.onClicked.addListener(function(tab) {
-//     console.log(tab)
-//     console.log(chrome.extension.getViews());
-// });
-//chrome.browserAction.setPopup({popup: '../background.html'});
-
-// chrome.runtime.onMessage.addListener(
-//     function(request, sender, sendResponse) {
-//         console.log(sender.tab ?
-//             "from a content script:" + sender.tab.url :
-//             "from the extension");
-//         console.log(request);
-//     });
-
-//console.log(chrome.extension.getViews());
-
-
-//-----------------------------------------------------
-
-
-
-
-
-
-window.AppDispatcher = new __WEBPACK_IMPORTED_MODULE_1_flux__["Dispatcher"]();
-
-window.Store = Object.assign({}, __WEBPACK_IMPORTED_MODULE_0_events__["EventEmitter"].prototype, {
-    lrc: null,
-    artist: null,
-    title: null,
-    isPlaying: null,
-    time: null,
-
-    emitChange: function emitChange() {
-        this.emit(__WEBPACK_IMPORTED_MODULE_2__constants__["a" /* default */].CHANGE_EVENT);
-    },
-    addChangeListener: function addChangeListener(callback) {
-        this.on(__WEBPACK_IMPORTED_MODULE_2__constants__["a" /* default */].CHANGE_EVENT, callback);
-    },
-    removeChangeListener: function removeChangeListener(callback) {
-        this.removeListener(__WEBPACK_IMPORTED_MODULE_2__constants__["a" /* default */].CHANGE_EVENT, callback);
-    }
-});
-
-window.AppDispatcher.register(function (payload) {
-    switch (payload.type) {
-        case __WEBPACK_IMPORTED_MODULE_2__constants__["a" /* default */].LYRYCS_LOAD_SUCCESS:
-            window.Store.lrc = payload.lrc;
-            window.Store.artist = payload.artist;
-            window.Store.title = payload.title;
-            window.Store.isPlaying = true;
-            window.Store.time = 0;
-            window.Store.emitChange();
-            break;
-
-        case __WEBPACK_IMPORTED_MODULE_2__constants__["a" /* default */].START_PLAYING:
-            window.Store.isPlaying = true;
-            window.Store.emitChange();
-            break;
-
-        case __WEBPACK_IMPORTED_MODULE_2__constants__["a" /* default */].PAUSE_PLAYING:
-            window.Store.isPlaying = false;
-            window.Store.emitChange();
-            break;
-
-        case __WEBPACK_IMPORTED_MODULE_2__constants__["a" /* default */].JUMP_TO_POSITION:
-            window.Store.time = payload.time;
-            window.Store.emitChange();
-            break;
-    }
-
-    return true;
-});
-
-/***/ }),
-
-/***/ 85:
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_keymirror__ = __webpack_require__(110);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_keymirror___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_keymirror__);
-
-
-/* harmony default export */ __webpack_exports__["a"] = (__WEBPACK_IMPORTED_MODULE_0_keymirror___default()({
-    CHANGE_EVENT: null,
-    LYRYCS_LOAD_SUCCESS: null,
-    LYRYCS_LOAD_FAIL: null,
-    START_PLAYING: null,
-    PAUSE_PLAYING: null,
-    JUMP_TO_POSITION: null
-}));
-
-/***/ }),
-
-/***/ 93:
+/***/ 86:
 /***/ (function(module, exports) {
 
 // Copyright Joyent, Inc. and other Node contributors.
@@ -1063,6 +1128,79 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
+
+/***/ }),
+
+/***/ 87:
+/***/ (function(module, exports, __webpack_require__) {
+
+/**
+ * Copyright (c) 2014-2015, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ */
+
+module.exports.Dispatcher = __webpack_require__(109);
+
+
+/***/ }),
+
+/***/ 89:
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony default export */ __webpack_exports__["a"] = ({
+    search: function search(artist, title) {
+        function request(url) {
+            return new Promise(function (resolve, reject) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', url);
+                var data = '';
+                xhr.onreadystatechange = function () {
+                    if (this.readyState != 4) return;
+                    if (this.status != 200) return reject();
+                    resolve(this.responseText);
+                };
+                xhr.send();
+            });
+        }
+
+        function googleSearch(query) {
+            return new Promise(function (resolve, reject) {
+
+                var searchUrl = 'https://www.google.com/search?site=&q=' + encodeURIComponent(query) + '&oq=' + encodeURIComponent(query);
+                request(searchUrl).then(function (responseText) {
+                    //sandbox.innerHTML = responseText;
+                    var firstH3Value = '<h3 class="r">';
+                    var linkBeginValue = 'href="';
+                    var linkEndValue = '"';
+
+                    var firstH3Pos = responseText.indexOf(firstH3Value);
+                    var linkBeginPos = responseText.indexOf(linkBeginValue, firstH3Pos + firstH3Value.length);
+                    var linkEndPos = responseText.indexOf(linkEndValue, linkBeginPos + linkBeginValue.length);
+                    var firstLink = responseText.substring(linkBeginPos + linkBeginValue.length, linkEndPos);
+
+                    if (firstLink && ~firstH3Pos && ~linkBeginPos && ~linkEndPos) resolve(firstLink);else reject();
+                }).catch(function () {
+                    reject();
+                });
+            });
+        }
+
+        function lrcRequest(link) {
+            var url = link + '?__VIEWSTATE=%2FwEPDwUKMTQyNTY4OTA5MGRkqbCCFLSPOtiTDSGMOEFjZrRFCFkQDsNUdRtCl6jLYrc%3D&__EVENTVALIDATION=%2FwEdAAL%2BOgribgzGGhWRmKMXo7jQWtMXX3%2BdPLuV1%2BH0GVcECHiubBn7NW%2BHm3rfGoVmNludXm26YcHVSzb9FeIgVfh8&btnDnlLrc=Download';
+            return request(url);
+        }
+
+        var query = 'site:lyricslrc.com ' + artist + ' ' + title;
+        return googleSearch(query).then(function (link) {
+            return lrcRequest(link);
+        });
+    }
+});
 
 /***/ })
 

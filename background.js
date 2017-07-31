@@ -32,21 +32,71 @@ chrome.webRequest.onHeadersReceived.addListener((data) => {
 
 //-----------------------------------------------------
 
+import AppConstants from './constants';
+import {
+    Dispatcher
+} from 'flux';
+let AppDispatcher = new Dispatcher();
+
+//------------------------------------------------------
+
+let dispatch = payload => AppDispatcher.dispatch(payload);
+import api from './api';
+let Actions = {
+    setNewLyrics(artist, title) {
+        dispatch({
+            type: AppConstants.LYRYCS_LOAD_START,
+            artist,
+            title
+        });
+
+        api.search(artist, title).then(lrc => {
+            dispatch({
+                type: AppConstants.LYRYCS_LOAD_SUCCESS,
+                lrc,
+                artist,
+                title
+            });
+
+        }).catch(() => {
+            dispatch({
+                type: AppConstants.LYRYCS_LOAD_FAIL,
+                artist,
+                title
+            });
+
+        });
+    },
+
+    setTime(time) {
+        dispatch({
+            type: AppConstants.TIME_CHANGE,
+            time
+        });
+    },
+
+    setPlayingState(playingState) {
+        dispatch({
+            type: AppConstants.PLAYING_STATE_CHANGE,
+            playingState
+        });
+    }
+
+};
+
+//-------------------------------------------------
+
 import {
     EventEmitter
 } from 'events';
 
-import { Dispatcher } from 'flux';
-import AppConstants from './constants';
-
-window.AppDispatcher =  new Dispatcher();
-
-window.Store = Object.assign({}, EventEmitter.prototype, {
+let Store = Object.assign({}, EventEmitter.prototype, {
     lrc: null,
     artist: null,
     title: null,
-    isPlaying: null,
-    time: null,
+    playingState: false,
+    time: 0,
+    viewState: AppConstants.VIEW_STATE_REPOSE,
 
     emitChange() {
         this.emit(AppConstants.CHANGE_EVENT);
@@ -61,33 +111,68 @@ window.Store = Object.assign({}, EventEmitter.prototype, {
     }
 });
 
-window.AppDispatcher.register(function(payload) {
+AppDispatcher.register(dispatcherCallback);
+
+function dispatcherCallback(payload) {
+    console.log('dispatcherCallback');
+
     switch (payload.type) {
+        case AppConstants.LYRYCS_LOAD_START:
+            Store.artist = payload.artist;
+            Store.title = payload.title;
+            Store.viewState = AppConstants.VIEW_STATE_LOADING;
+            break;
+
         case AppConstants.LYRYCS_LOAD_SUCCESS:
-            window.Store.lrc = payload.lrc;
-            window.Store.artist = payload.artist;
-            window.Store.title = payload.title;
-            window.Store.isPlaying = true;
-            window.Store.time = 0;
-            window.Store.emitChange();
+            Store.lrc = payload.lrc;
+            Store.artist = payload.artist;
+            Store.title = payload.title;
+            Store.playingState = true;
+            Store.time = 0;
+            Store.viewState = AppConstants.VIEW_STATE_LYRICS;
             break;
 
-        case AppConstants.START_PLAYING:
-            window.Store.isPlaying = true;
-            window.Store.emitChange();
+        case AppConstants.LYRYCS_LOAD_FAIL:
+            Store.lrc = null;
+            Store.artist = payload.artist;
+            Store.title = payload.title;
+            Store.playingState = false;
+            Store.time = 0;
+            Store.viewState = AppConstants.VIEW_STATE_ERROR;
             break;
 
-        case AppConstants.PAUSE_PLAYING:
-            window.Store.isPlaying = false;
-            window.Store.emitChange();
+        case AppConstants.PLAYING_STATE_CHANGE:
+            Store.playingState = payload.playingState;
             break;
 
-
-        case AppConstants.JUMP_TO_POSITION:
-            window.Store.time = payload.time;
-            window.Store.emitChange();
+        case AppConstants.TIME_CHANGE:
+            Store.time = payload.time;
             break;
+
     }
 
+    Store.emitChange();
     return true;
+}
+
+
+//-----------------
+
+chrome.runtime.onMessage.addListener(VKState => {
+    console.log('background onmessage: ');
+    console.log(VKState);
+
+    if (Store.time !== VKState.time)
+        Actions.setTime(VKState.time);
+
+    if (Store.artist !== VKState.artist || Store.title !== VKState.title)
+        Actions.setNewLyrics(VKState.artist, VKState.title);
+    
+    if (Store.playingState !== VKState.playingState)
+        Actions.setPlayingState(VKState.playingState);
+
 });
+
+window.AppDispatcher = AppDispatcher;
+window.Store = Store;
+window.Actions = Actions;

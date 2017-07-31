@@ -1,13 +1,16 @@
 let AppDispatcher = chrome.extension.getBackgroundPage().AppDispatcher;
 
+let dispatch = payload => AppDispatcher.dispatch(payload);
+
+
 import AppConstants from '../constants';
 import api from '../api';
 
 export default {
     setNewLyrics(artist, title) {
+        console.log('setNewLyrics: ' + artist + ' ' + title)
         api.search(artist, title).then(lrc => {
-
-            AppDispatcher.dispatch({
+            dispatch({
                 type: AppConstants.LYRYCS_LOAD_SUCCESS,
                 lrc,
                 artist,
@@ -15,8 +18,7 @@ export default {
             });
 
         }).catch(() => {
-
-            AppDispatcher.dispatch({
+            dispatch({
                 type: AppConstants.LYRYCS_LOAD_FAIL
             });
 
@@ -24,20 +26,20 @@ export default {
     },
 
     startPlaying() {
-        AppDispatcher.dispatch({
+        dispatch({
             type: AppConstants.START_PLAYING
         });
     },
 
     pausePlaying() {
-        AppDispatcher.dispatch({
+        dispatch({
             type: AppConstants.PAUSE_PLAYING
         });
     },
 
-    jumpToPosition(time) {
-        AppDispatcher.dispatch({
-            type: AppConstants.JUMP_TO_POSITION,
+    setTime(time) {
+        dispatch({
+            type: AppConstants.SET_TIME,
             time
         });
     }
