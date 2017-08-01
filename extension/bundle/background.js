@@ -616,6 +616,59 @@ var dispatch = function dispatch(payload) {
 
 var Actions = {
     setNewLyrics: function setNewLyrics(artist, title) {
+
+        function getLrcArray(lrc) {
+
+            if (!lrc) return null;
+
+            var getlrcObj = function getlrcObj(time, line) {
+                return {
+                    time: time,
+                    line: line
+                };
+            };
+            var getTimestamp = function getTimestamp(mm, ss, xx) {
+                return mm * 60 * 1000 + ss * 1000 + xx;
+            };
+            var getTimestampByExecResult = function getTimestampByExecResult(result) {
+                return getTimestamp(+result[1] || 0, +result[2] || 0, +result[3] || 0);
+            };
+
+            var lrcArray = [];
+            var regTemplate = /\[(\d\d):(\d\d)\.*(\d\d)*](.*)$/;
+            var regexp = new RegExp(regTemplate, 'igm');
+            var regexp2 = new RegExp(regTemplate, 'i');
+
+            var result = void 0;
+            var innerResult = void 0;
+
+            var _loop = function _loop() {
+                var line = result[result.length - 1];
+                var timestamps = [getTimestampByExecResult(result)];
+
+                while (innerResult = regexp2.exec(line)) {
+                    timestamps.push(getTimestampByExecResult(innerResult));
+                    line = innerResult[innerResult.length - 1];
+                }
+
+                timestamps.forEach(function (timestamp) {
+                    return lrcArray.push(getlrcObj(timestamp, line));
+                });
+            };
+
+            while (result = regexp.exec(lrc)) {
+                _loop();
+            }
+
+            lrcArray.sort(function (a, b) {
+                return a.time - b.time;
+            });
+
+            if (lrcArray.length === 0) return null;
+
+            return lrcArray;
+        }
+
         dispatch({
             type: __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].LYRYCS_LOAD_START,
             artist: artist,
@@ -623,13 +676,23 @@ var Actions = {
         });
 
         __WEBPACK_IMPORTED_MODULE_2__api__["a" /* default */].search(artist, title).then(function (lrc) {
+            console.log('search result: ' + lrc);
+
+            var lrcArray = getLrcArray(lrc);
+            if (!lrcArray) throw new Error('invalid lrc');
+
+            localStorage.setItem(__WEBPACK_IMPORTED_MODULE_2__api__["a" /* default */].trackHash(artist, title), lrc);
+
             dispatch({
                 type: __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].LYRYCS_LOAD_SUCCESS,
-                lrc: lrc,
+                lrcArray: lrcArray,
                 artist: artist,
                 title: title
             });
-        }).catch(function () {
+        }).catch(function (err) {
+            console.log('search result: error');
+            console.log(err);
+
             dispatch({
                 type: __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].LYRYCS_LOAD_FAIL,
                 artist: artist,
@@ -656,7 +719,7 @@ var Actions = {
 
 
 var Store = Object.assign({}, __WEBPACK_IMPORTED_MODULE_3_events__["EventEmitter"].prototype, {
-    lrc: null,
+    lrcArray: null,
     artist: null,
     title: null,
     playingState: false,
@@ -674,11 +737,7 @@ var Store = Object.assign({}, __WEBPACK_IMPORTED_MODULE_3_events__["EventEmitter
     }
 });
 
-AppDispatcher.register(dispatcherCallback);
-
-function dispatcherCallback(payload) {
-    console.log('dispatcherCallback');
-
+AppDispatcher.register(function (payload) {
     switch (payload.type) {
         case __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].LYRYCS_LOAD_START:
             Store.artist = payload.artist;
@@ -687,7 +746,7 @@ function dispatcherCallback(payload) {
             break;
 
         case __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].LYRYCS_LOAD_SUCCESS:
-            Store.lrc = payload.lrc;
+            Store.lrcArray = payload.lrcArray;
             Store.artist = payload.artist;
             Store.title = payload.title;
             Store.playingState = true;
@@ -696,7 +755,7 @@ function dispatcherCallback(payload) {
             break;
 
         case __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* default */].LYRYCS_LOAD_FAIL:
-            Store.lrc = null;
+            Store.lrcArray = null;
             Store.artist = payload.artist;
             Store.title = payload.title;
             Store.playingState = false;
@@ -716,13 +775,11 @@ function dispatcherCallback(payload) {
 
     Store.emitChange();
     return true;
-}
+});
 
 //-----------------
 
 chrome.runtime.onMessage.addListener(function (VKState) {
-    console.log('background onmessage: ');
-    console.log(VKState);
 
     if (Store.time !== VKState.time) Actions.setTime(VKState.time);
 
@@ -1153,7 +1210,18 @@ module.exports.Dispatcher = __webpack_require__(109);
 
 "use strict";
 /* harmony default export */ __webpack_exports__["a"] = ({
+
+    trackHash: function trackHash(artist, title) {
+        return 'lrc: ' + artist.toLowerCase() + ' - ' + title.toLowerCase();
+    },
+
     search: function search(artist, title) {
+        var GOOGLE_LAST_SEARCHING_DATE_ID = 'google_search_date';
+        var GOOGLE_SEARCH_MIN_INTERVAL = 5000;
+
+        var lrc = null;
+        if (lrc = localStorage.getItem(this.trackHash(artist, title))) return Promise.resolve(lrc);
+
         function request(url) {
             return new Promise(function (resolve, reject) {
                 var xhr = new XMLHttpRequest();
@@ -1170,23 +1238,31 @@ module.exports.Dispatcher = __webpack_require__(109);
 
         function googleSearch(query) {
             return new Promise(function (resolve, reject) {
+                function googleRequest() {
+                    var searchUrl = 'https://www.google.com/search?site=&q=' + encodeURIComponent(query) + '&oq=' + encodeURIComponent(query);
+                    request(searchUrl).then(function (responseText) {
+                        localStorage.setItem(GOOGLE_LAST_SEARCHING_DATE_ID, Date.now());
 
-                var searchUrl = 'https://www.google.com/search?site=&q=' + encodeURIComponent(query) + '&oq=' + encodeURIComponent(query);
-                request(searchUrl).then(function (responseText) {
-                    //sandbox.innerHTML = responseText;
-                    var firstH3Value = '<h3 class="r">';
-                    var linkBeginValue = 'href="';
-                    var linkEndValue = '"';
+                        var firstH3Value = '<h3 class="r">';
+                        var linkBeginValue = 'href="';
+                        var linkEndValue = '"';
 
-                    var firstH3Pos = responseText.indexOf(firstH3Value);
-                    var linkBeginPos = responseText.indexOf(linkBeginValue, firstH3Pos + firstH3Value.length);
-                    var linkEndPos = responseText.indexOf(linkEndValue, linkBeginPos + linkBeginValue.length);
-                    var firstLink = responseText.substring(linkBeginPos + linkBeginValue.length, linkEndPos);
+                        var firstH3Pos = responseText.indexOf(firstH3Value);
+                        var linkBeginPos = responseText.indexOf(linkBeginValue, firstH3Pos + firstH3Value.length);
+                        var linkEndPos = responseText.indexOf(linkEndValue, linkBeginPos + linkBeginValue.length);
+                        var firstLink = responseText.substring(linkBeginPos + linkBeginValue.length, linkEndPos);
 
-                    if (firstLink && ~firstH3Pos && ~linkBeginPos && ~linkEndPos) resolve(firstLink);else reject();
-                }).catch(function () {
-                    reject();
-                });
+                        if (firstLink && ~firstH3Pos && ~linkBeginPos && ~linkEndPos) resolve(firstLink);else reject();
+                    }).catch(function () {
+                        reject();
+                    });
+                }
+
+                var lastSearchingDate = null;
+                if ((lastSearchingDate = parseInt(localStorage.getItem(GOOGLE_LAST_SEARCHING_DATE_ID))) && Date.now() - lastSearchingDate < GOOGLE_SEARCH_MIN_INTERVAL) {
+                    console.log('Google search delayed. Continue in ' + (GOOGLE_SEARCH_MIN_INTERVAL - (Date.now() - lastSearchingDate)));
+                    setTimeout(googleRequest, GOOGLE_SEARCH_MIN_INTERVAL - (Date.now() - lastSearchingDate));
+                } else googleRequest();
             });
         }
 
@@ -1196,6 +1272,7 @@ module.exports.Dispatcher = __webpack_require__(109);
         }
 
         var query = 'site:lyricslrc.com ' + artist + ' ' + title;
+
         return googleSearch(query).then(function (link) {
             return lrcRequest(link);
         });

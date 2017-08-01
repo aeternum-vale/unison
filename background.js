@@ -44,6 +44,48 @@ let dispatch = payload => AppDispatcher.dispatch(payload);
 import api from './api';
 let Actions = {
     setNewLyrics(artist, title) {
+
+        function getLrcArray(lrc) {
+
+            if (!lrc)
+                return null;
+
+            let getlrcObj = (time, line) => {
+                return {
+                    time,
+                    line
+                }
+            };
+            let getTimestamp = (mm, ss, xx) => (mm * 60 * 1000 + ss * 1000 + xx);
+            let getTimestampByExecResult = result => getTimestamp(+result[1] || 0, +result[2] || 0, +result[3] || 0);
+
+            let lrcArray = [];
+            let regTemplate = /\[(\d\d):(\d\d)\.*(\d\d)*](.*)$/;
+            let regexp = new RegExp(regTemplate, 'igm');
+            let regexp2 = new RegExp(regTemplate, 'i');
+
+            let result;
+            let innerResult;
+            while (result = regexp.exec(lrc)) {
+                let line = result[result.length - 1];
+                let timestamps = [getTimestampByExecResult(result)];
+
+                while (innerResult = regexp2.exec(line)) {
+                    timestamps.push(getTimestampByExecResult(innerResult));
+                    line = innerResult[innerResult.length - 1];
+                }
+
+                timestamps.forEach(timestamp => lrcArray.push(getlrcObj(timestamp, line)));
+            }
+
+            lrcArray.sort((a, b) => (a.time - b.time));
+
+            if (lrcArray.length === 0)
+                return null;
+
+            return lrcArray;
+        }
+
         dispatch({
             type: AppConstants.LYRYCS_LOAD_START,
             artist,
@@ -51,14 +93,26 @@ let Actions = {
         });
 
         api.search(artist, title).then(lrc => {
+            console.log('search result: ' + lrc);
+
+
+            let lrcArray = getLrcArray(lrc);
+            if (!lrcArray)
+                throw new Error('invalid lrc');
+
+            localStorage.setItem(api.trackHash(artist, title), lrc);
+
             dispatch({
                 type: AppConstants.LYRYCS_LOAD_SUCCESS,
-                lrc,
+                lrcArray,
                 artist,
                 title
             });
 
-        }).catch(() => {
+        }).catch((err) => {
+            console.log('search result: error');
+            console.log(err);
+
             dispatch({
                 type: AppConstants.LYRYCS_LOAD_FAIL,
                 artist,
@@ -91,7 +145,7 @@ import {
 } from 'events';
 
 let Store = Object.assign({}, EventEmitter.prototype, {
-    lrc: null,
+    lrcArray: null,
     artist: null,
     title: null,
     playingState: false,
@@ -111,11 +165,7 @@ let Store = Object.assign({}, EventEmitter.prototype, {
     }
 });
 
-AppDispatcher.register(dispatcherCallback);
-
-function dispatcherCallback(payload) {
-    console.log('dispatcherCallback');
-
+AppDispatcher.register(function (payload) {
     switch (payload.type) {
         case AppConstants.LYRYCS_LOAD_START:
             Store.artist = payload.artist;
@@ -124,7 +174,7 @@ function dispatcherCallback(payload) {
             break;
 
         case AppConstants.LYRYCS_LOAD_SUCCESS:
-            Store.lrc = payload.lrc;
+            Store.lrcArray = payload.lrcArray;
             Store.artist = payload.artist;
             Store.title = payload.title;
             Store.playingState = true;
@@ -133,7 +183,7 @@ function dispatcherCallback(payload) {
             break;
 
         case AppConstants.LYRYCS_LOAD_FAIL:
-            Store.lrc = null;
+            Store.lrcArray = null;
             Store.artist = payload.artist;
             Store.title = payload.title;
             Store.playingState = false;
@@ -153,21 +203,18 @@ function dispatcherCallback(payload) {
 
     Store.emitChange();
     return true;
-}
-
+});
 
 //-----------------
 
 chrome.runtime.onMessage.addListener(VKState => {
-    console.log('background onmessage: ');
-    console.log(VKState);
 
     if (Store.time !== VKState.time)
         Actions.setTime(VKState.time);
 
     if (Store.artist !== VKState.artist || Store.title !== VKState.title)
         Actions.setNewLyrics(VKState.artist, VKState.title);
-    
+
     if (Store.playingState !== VKState.playingState)
         Actions.setPlayingState(VKState.playingState);
 

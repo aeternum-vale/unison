@@ -64,8 +64,8 @@ function setWatchers() {
                 case playButtonElement:
                     let newPlayingState = getPlayingState();
                     if (playingState !== newPlayingState) {
-                        sendVKState();
                         playingState = newPlayingState;
+                        sendVKState();
                     }
                     break;
 
@@ -74,11 +74,12 @@ function setWatchers() {
                     let newTitle = getTitle();
 
                     if (artist !== newArtist || title !== newTitle) {
-                        sendVKState();
+
                         title = newTitle;
                         artist = newArtist;
                         time = 0;
                         playingState = true;
+                        sendVKState();
                     }
                     break;
 
@@ -86,8 +87,8 @@ function setWatchers() {
                     let newTime = getTime();
 
                     if (newTime !== time) {
-                        sendVKState();
                         time = newTime;
+                        sendVKState();
                     }
                     // if (Math.abs(time - newDuration) > 1000)
                     //     console.log('jump ' + time + ' ' + newDuration);

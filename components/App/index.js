@@ -55,7 +55,7 @@ let Store = chrome.extension.getBackgroundPage().Store;
 function getStateFromFlux() {
 
     return {
-        lrc: Store.lrc,
+        lrcArray: Store.lrcArray,
         artist: Store.artist,
         title: Store.title,
         time: Store.time,
@@ -70,7 +70,6 @@ export default class App extends Component {
         super(props);
 
         this.state = getStateFromFlux();
-
         this.interval = -1;
 
         this._onChange = this._onChange.bind(this);
@@ -91,11 +90,12 @@ export default class App extends Component {
 
                 if (total < 1000)
                     Actions.setTime(this.state.time + timePassed);
-            }, 42);
+            }, 91);
         }
     }
 
     _pause() {
+
         clearInterval(this.interval);
         this.interval = -1;
     }
@@ -116,61 +116,31 @@ export default class App extends Component {
 
     _onChange() {
         this.setState(getStateFromFlux(), () => {
+
             if (this.state.playingState)
                 this._play();
             else
                 this._pause();
+
         });
     }
 
-    _getLrcArray(lrc) {
-
-        if (!lrc)
-            throw new Error('no lrc provided');
-
-        let getlrcObj = (time, line) => {
-            return {
-                time,
-                line
-            }
-        };
-        let getTimestamp = (mm, ss, xx) => (mm * 60 * 1000 + ss * 1000 + xx);
-        let getTimestampByExecResult = result => getTimestamp(+result[1] || 0, +result[2] || 0, +result[3] || 0);
-
-        let lrcArray = [];
-        let regTemplate = /\[(\d\d):(\d\d)\.*(\d\d)*](.*)$/;
-        let regexp = new RegExp(regTemplate, 'igm');
-        let regexp2 = new RegExp(regTemplate, 'i');
-
-        let result;
-        let innerResult;
-        while (result = regexp.exec(lrc)) {
-            let line = result[result.length - 1];
-            let timestamps = [getTimestampByExecResult(result)];
-
-            while (innerResult = regexp2.exec(line)) {
-                timestamps.push(getTimestampByExecResult(innerResult));
-                line = innerResult[innerResult.length - 1];
-            }
-
-            timestamps.forEach(timestamp => lrcArray.push(getlrcObj(timestamp, line)));
-        }
-
-        lrcArray.sort((a, b) => (a.time - b.time));
-        return lrcArray;
-    }
 
     render() {
         return (
             <div className='app'>
-                <LyricsScreen viewState = {
+                <LyricsScreen
+                    viewState = {
                         this.state.viewState
                     }
                     title = {
                         this.state.title
                     }
+                    artist = {
+                        this.state.artist
+                    }
                     lrcArray = {
-                        this.state.lrc ? this._getLrcArray(this.state.lrc) : null
+                        this.state.lrcArray
                     }
                     time = {
                         this.state.time
